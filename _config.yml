@@ -1,6 +1,8 @@
 title: Mark Hildebrand
-logo: /assets/logo.svg
-description: Minimal is a theme for GitHub Pages.
-show_downloads: true
+#logo: /assets/logo.svg
+logo: /assets/me.jpeg
+description: A Website
+#show_downloads: true
 google_analytics:
 theme: jekyll-theme-minimal
+github: [metadata]
