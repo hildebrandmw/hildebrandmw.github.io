@@ -1,8 +1,42 @@
-title: Mark Hildebrand
-#logo: /assets/logo.svg
-logo: /assets/me.jpeg
-description: A Website
-#show_downloads: true
-google_analytics:
-theme: jekyll-theme-minimal
-github: [metadata]
+# Site Settings
+title: "The Buggernaut"
+logo: /assets/logo.svg
+description: "A Website"
+minimal_mistakes_skin: "dark"
+
+# Build Settings
+markdown: kramdown
+kramdown:
+    math_engine: katex
+remote_theme: mmistakes/minimal-mistakes
+# Outputting
+permalink: /:categories/:title/
+paginate: 5 # amount of posts to show
+paginate_path: /page:num/
+
+# include:
+
+# Plugins
+plugins:
+  - jekyll-include-cache
+
+# Site Author
+author:
+  name: "Mark Hildebrand"
+  avatar: "/assets/me.jpeg"
+  bio: |
+    * My name is Mark. I know very little about many things, and nothing about most.
+    * I'm currently at [UC Davis](https://arch.cs.ucdavis.edu) studying Computer Architecture.
+    * I program a lot and thus have a messy [GitHub](https://github.com/hildebrandmw).
+    * There apparently only exists one decent photo of myself.
+    * I like to climb things.
+
+
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: single
+      classes: wide
+      read_time: true
