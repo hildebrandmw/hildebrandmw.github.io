@@ -41,7 +41,7 @@ In a nut-shell, the name of the game is:
 The approximate part comes from relaxing the restriction that the `k` nearest neighbors are the *exact* nearest neighbors.
 In other words, we're willing to trade exactness for performance (to a point, we could always return `k` random neighbors for a really fast algorithm, but that wouldn't be particularly useful).
 
-I was the **primary developer** behind this submission.
+I was the primary developer behind this submission.
 Highlights of the library include:
 
 * Distance computation functions (e.g. Euclidean and Inner Product) optimized to use AVX instructions for both long vectors (think 100+ dimensional) and short vector (like 4 dimensions like you would find for product quantization).
