@@ -28,6 +28,7 @@ After that, it was mostly a matter of minor bug fixes and running experiments fo
 
 * [AutoTM](#autotm) -- [February 2019 - December 2019]
 * [OneDNN.jl](#onednn-wrapper-for-julia) -- [June 2020, April 2021 - November 2021]
+* [EmbeddingTables.jl](#embedding-tables) -- [August 2021 - October 2021, March 2022 - April 2022]
 * [CachedArrays.jl](#cachedarrays) -- [April 2020 - June 2020, April 2021 - October 2021]
 * [CounterTools.jl](#countertools) -- [November 2019, March 2020]
 * [SystemSnoop.jl](#systemsnoop) -- [October 2018 - February 2019]
@@ -122,6 +123,33 @@ This wrapper library features a bunch of cool things:
 * A parser/converter for OneDNN's exotic blocked memory layouts.
 * Support for full forward and backward passes of neural networks using [ChainRules.jl](https://github.com/JuliaDiff/ChainRules.jl).
   In particular, the defined rules could fuse activations for convolutions and dense layers if the OneDNN library allowed it.
+
+----------
+
+### Embedding Tables
+
+* [EmbeddingTables.jl - Github](https://github.com/darchr/EmbeddingTables.jl)
+
+**Dates:** Serious performance oriented development begin in August 2021 and went through October of the same year.
+I did some performance re-engineering in March and April of 2022.
+
+**Description:** High-performance embedding table lookup and stochastic gradient descent (SGD) operations.
+I implemented this as part of a very fast DLRM implementation.
+Some highlights include:
+
+* An abstract embedding table API which separates the data structure implementation from the low-level operations.
+  This enabled design space exploration in table representation, particularly when it came to partitioning tables in Optane persistent memory and DRAM.
+* In-register accumulation of partial sums to minimize data movement.
+* Use of non-temporal stores for improve performance of SGD operations for tables in DRAM.
+* Parallelized lookup and update operations for multiple tables using intra-table parallelism for better dynamic load balancing.
+* Automatic post-lookup concatenation fusion for multiple table lookups.
+  In DLRM workloads, it's common to concatenate the results of multiple independent lookups together.
+  This fusion operation pre-allocated the concatenated result and wrote the results of each lookup directly the correct sub-array of the full result.
+* Back-propagation compatibility using [ChainRules.jl](https://github.com/JuliaDiff/ChainRules.jl)
+
+In addition, at one point in time, I had access to a [Cooperlake](https://en.wikipedia.org/wiki/Cooper_Lake_(microprocessor)) CPU, which has hardware support for the [BFloat16](https://en.wikipedia.org/wiki/Bfloat16_floating-point_format) data type.
+At that time, I was able to extend support for that data type as well as the "split SGD" optimization outlined in [this paper](https://arxiv.org/pdf/2005.04680.pdf).
+I'm looking forward to BFloat16 hardware becoming more available in the future because it offers interesting trade-offs when it comes to optimizing numerical software!
 
 ----------
 
