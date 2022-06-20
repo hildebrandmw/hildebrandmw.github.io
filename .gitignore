@@ -4,4 +4,4 @@ Gemfile.lock
 *.gem
 tags
 .DS_Store
-./vendor
+vendor/
