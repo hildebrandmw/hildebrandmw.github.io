@@ -19,12 +19,13 @@ Please don't judge me too harshly 😊.
 **Table of Contents**
 
 1. [Similariy Search](#billion-scale-approximate-similarity-search)
-2. [OneDNN.jl](#onednn-wrapper-for-julia)
-3. [CounterTools.jl](#countertools)
-4. [AutoTM](#autotm)
-5. [Many-Core Place-and-Route](#many-core-place-and-route)
-6. [DE10 Lite HDL](#de10-lite-hdl)
-
+2. [AutoTM](#autotm)
+3. [OneDNN.jl](#onednn-wrapper-for-julia)
+4. [CachedArrays.jl](#cachedarrays)
+5. [CounterTools.jl](#countertools)
+6. [SystemSnoop.jl](#systemsnoop)
+7. [Many-Core Place-and-Route](#many-core-place-and-route)
+8. [DE10 Lite HDL](#de10-lite-hdl)
 
 ## Billion Scale Approximate Similarity Search
 
@@ -49,36 +50,6 @@ Highlights of the library include:
 * Well defined graph adjacency list API to allow for flexibility in the graph representation (helpful for storing the graph on Optane).
 * Dynamic multi-threaded load balancing of work for both querying and index construction.
 * NUMA aware data structures allowing for near-perfect scaling on multi-socket systems.
-
-## OneDNN Wrapper for Julia
-
-* [OneDNN.jl - Github](https://github.com/hildebrandmw/OneDNN.jl)
-
-For my PhD work on heterogeneous memory, I needed high-performance neural network primitives where **I** controlled the pointers for the intermediate tensors.
-The solution was to create a Julia wrapper for Intel's [OneDNN](https://github.com/oneapi-src/oneDNN) library, which basically supplies the fastest CPU-based neural network primitives around.
-
-This wrapper library features a bunch of cool things:
-* Automatic glue-code generation of the OneDNN C header using [Clang.jl](https://github.com/JuliaInterop/Clang.jl) (along with some expression rewriting to use the type system to catch some pointer conversion bugs).
-* Support for giving memory to OneDNN through arbitrary Julia arrays (including transposes and array views).
-* A parser/converter for OneDNN's exotic blocked memory layouts.
-* Support for full forward and backward passes of neural networks using [ChainRules.jl](https://github.com/JuliaDiff/ChainRules.jl).
-  In particular, the defined rules could fuse activations for convolutions and dense layers if the OneDNN library allowed it.
-
-## CounterTools
-
-* [CounterTools.jl - Github](https://github.com/hildebrandmw/CounterTools.jl)
-
-A small library I wrote for configuring and reading both core and uncore hardware performance counters on x86 Intel CPUs.
-This mainly works on Skylake/Cascade Lake server CPUs with some support for the Ice Lake IMC (integrated memory controller) counters.
-
-Now, you're probably asking yourself: "why do we need yet another performance counter library when things like `perf` and [pcm](https://github.com/opcm/pcm) exist?"
-The answer is: "Well, we really don't."
-
-My motivation for writing this was:
-* I needed low-overhead (`pcm` uses this giant centralized class) where I knew exactly what was being configured (I was afraid of `perf` trying to be fancy and do something like time multiplexing counters without me knowing).
-* I wanted to learn more about performance counter architecture and configuration.
-
-This library worked really well for me, but I completely do not recommend it in favor of more industrial strength tools. 😛
 
 ## AutoTM
 
@@ -107,7 +78,77 @@ In detail, this project involved:
 * Profit??
 
 This involved messing around with the internals of *nGraph*, which was quite fun.
-I'm not particularly happy with how clean the Julia code is in the AutoTM repo, but there is little point in cleaning it up now.
+
+## OneDNN Wrapper for Julia
+
+* [OneDNN.jl - Github](https://github.com/hildebrandmw/OneDNN.jl)
+
+For my PhD work on heterogeneous memory, I needed high-performance neural network primitives where **I** controlled the pointers for the intermediate tensors.
+The solution was to create a Julia wrapper for Intel's [OneDNN](https://github.com/oneapi-src/oneDNN) library, which basically supplies the fastest CPU-based neural network primitives around.
+
+This wrapper library features a bunch of cool things:
+* Automatic glue-code generation of the OneDNN C header using [Clang.jl](https://github.com/JuliaInterop/Clang.jl) (along with some expression rewriting to use the type system to catch some pointer conversion bugs).
+* Support for giving memory to OneDNN through arbitrary Julia arrays (including transposes and array views).
+* A parser/converter for OneDNN's exotic blocked memory layouts.
+* Support for full forward and backward passes of neural networks using [ChainRules.jl](https://github.com/JuliaDiff/ChainRules.jl).
+  In particular, the defined rules could fuse activations for convolutions and dense layers if the OneDNN library allowed it.
+
+## CachedArrays
+
+* [CachedArrays.jl - Github](https://github.com/darchr/CachedArrays.jl)
+
+In many respects, this is a generalization of the ideas presented in [AutoTM](#autotm).
+The idea is to introduce an array type in Julia that can both live and migrate between fast and slow memory, but isn't limited to static computation graphs like AutoTM was.
+
+![CachedArrays Overview](./assets/system.png)
+A general overview of the architecture of CachedArrays is shown in the figure above.
+The manager maintains two heaps: one for fast memory and one for slow.
+Data arrays that are allocated are backed by an "object", which contains a pointer to the actual data backing the array.
+The actual data live in either fast or slow memory and can migrate between memory pools during runtime.
+The policy component is customizable on a per-application basis and can take semantic hints from the user to help direct data orchestration.
+
+![Heap Evict](./assets/heapwalk.png)
+
+In order to support migrating data from one memory pool to the other, the memory heaps in CachedArrys need to support eviction.
+Because memory allocations are not uniform in size, this potentially requires evicting multiple memory blocks at a time.
+The figure above shows what this looks like.
+Beginning at some entry point, the heap manager calls a call-back function on each allocated block it experiences.
+This callback is responsible for migrating the existing data to the remote memory pool.
+Free regions are skipped over.
+Once enough memory has been freed, a new larger allocation can be conducted.
+
+More information on CachedArrays as well as its usage in CNN experiments can be found in Chapter 4 of my dissertation [link coming].
+
+## CounterTools
+
+* [CounterTools.jl - Github](https://github.com/hildebrandmw/CounterTools.jl)
+
+A small library I wrote for configuring and reading both core and uncore hardware performance counters on x86 Intel CPUs.
+This mainly works on Skylake/Cascade Lake server CPUs with some support for the Ice Lake IMC (integrated memory controller) counters.
+
+Now, you're probably asking yourself: "why do we need yet another performance counter library when things like `perf` and [pcm](https://github.com/opcm/pcm) exist?"
+The answer is: "Well, we really don't."
+
+My motivation for writing this was:
+* I needed low-overhead (`pcm` uses this giant centralized class) where I knew exactly what was being configured (I was afraid of `perf` trying to be fancy and do something like time multiplexing counters without me knowing).
+* I wanted to learn more about performance counter architecture and configuration.
+
+This library worked really well for me, but I completely do not recommend it in favor of more industrial strength tools. 😛
+
+## SystemSnoop
+
+* [SystemSnoop.jl - Github](https://github.com/hildebrandmw/SystemSnoop.jl)
+
+SystemSnoop is one of those tiny utility packages that just end up being super useful.
+Though-out my PhD work, I did a lot of performance monitoring such as periodically collecting memory consumption of running applications, reading performance counters, taking time stamps, etc.
+This package helped automate that process using a simple measurement API:
+
+* `prepare(x)`: Prepare some instrument `x` (optional).
+* `measure(x)`: Perform a measurement on `x` (required).
+* `cleanup(x)`: Perform any tear-down required for instrument `x` (optional).
+
+Multiple instruments are collected into a `NamedTuple` which automatically broadcasts the API functions along each element of the tuple and constructs a `NamedTuple` of measurements.
+Though this is simple, it provided a uniform and reliable way of grouping together my desired measurements, collecting the results, and easily allowed for new measurement types to be added.
 
 ## Many-Core Place-and-Route
 
